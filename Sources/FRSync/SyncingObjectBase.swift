@@ -49,7 +49,11 @@ extension SyncingObjectBase {
             let documentDataElement = _documentDataValue(element, for: property)
             documentDataCollection.append(documentDataElement)
           }
-          documentData[property.name] = documentDataCollection
+          if property.type == .double && property.name == "coordinates" {
+            documentData[property.name] = FirebaseFirestore.GeoPoint(latitude: documentDataCollection[1] as! Double, longitude: documentDataCollection[0] as! Double)
+          } else {
+            documentData[property.name] = documentDataCollection
+          }
 
         } else if property.isDictionary {
           assert(property.dictionaryKeyType == .string)
@@ -87,11 +91,17 @@ extension SyncingObjectBase {
       guard let documentDataValue = documentData[property.name] else { continue }
       if property.isCollection {
         if property.isArray || property.isSet {
-          let documentDataCollection = documentDataValue as! [Any]
           var propertyCollection: [Any] = []
-          for documentDataValue in documentDataCollection {
-            let propertyValue = _propertyValue(documentDataValue, syncedAt: syncedAt, for: property)
-            propertyCollection.append(propertyValue)
+          if property.type == .double && property.name == "coordinates" {
+            let geoPoint = documentDataValue as! FirebaseFirestore.GeoPoint
+            propertyCollection.append(geoPoint.longitude)
+            propertyCollection.append(geoPoint.latitude)
+          } else {
+            let documentDataCollection = documentDataValue as! [Any]
+            for documentDataValue in documentDataCollection {
+              let propertyValue = _propertyValue(documentDataValue, syncedAt: syncedAt, for: property)
+              propertyCollection.append(propertyValue)
+            }
           }
           value[property.name] = propertyCollection
 
